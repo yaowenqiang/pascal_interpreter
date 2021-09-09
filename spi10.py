@@ -259,7 +259,7 @@ class Parser(object):
             self.eat(VAR)
             while self.current_token.type == ID:
                 var_decl = self.variable_decloation()
-                declarations.extend(var_ecl)
+                declarations.extend(var_decl)
                 self.eat(SEMI)
 
         return declarations
@@ -377,7 +377,7 @@ class Parser(object):
                 self.eat(MUL)
             elif token.type == INTEGER_DIV:
                 self.eat(INTEGER_DIV)
-            elif token_type == FLOAT_DIV:
+            elif token.type == FLOAT_DIV:
                 self.eat(FLOAT_DIV)
 
             node = BinOp(left=node, op=token, right=self.factor())
