@@ -507,16 +507,8 @@ class SymbolTableBuilder(NodeVisitor):
         pass
 
     def visit_BinOp(self, node):
-        if node.op.type == PLUS:
-            return self.visit(node.left) + self.visit(node.right)
-        elif node.op.type == MINUS:
-            return self.visit(node.left) - self.visit(node.right)
-        elif node.op.type == MUL:
-            return self.visit(node.left) * self.visit(node.right)
-        elif node.op.type == INTEGER_DIV:
-            return self.visit(node.left) // self.visit(node.right)
-        elif node.op.type == FLOAT_DIV:
-            return float(self.visit(node.left)) / float(self.visit(node.right))
+        self.visit(node.left)
+        self.visit(node.right)
 
     def visit_Num(self, node):
         return node.value
@@ -555,7 +547,6 @@ class SymbolTableBuilder(NodeVisitor):
         var_symbol = self.symtab.lookup(var_name)
         if var_symbol is None:
             raise NameError(repr(var_name))
-        self.visit(node.right)
 
 class Interpreter(NodeVisitor):
     def __init__(self, tree):
