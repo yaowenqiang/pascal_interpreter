@@ -468,7 +468,7 @@ class SymbolTable(object):
 
     def __str__(self):
         s = 'Symbols: {symbols} '.format(
-            symbols=[varlue for value in self._symbols.values()]
+            symbols=[value for value in self._symbols.values()]
         )
         return s
 
@@ -532,13 +532,23 @@ class SymbolTableBuilder(NodeVisitor):
         for child in node.children:
             self.visit(child)
 
+    def visit_VarDecl(self, node):
+        type_name = node.type_node.value
+        type_symbol = self.symtab.lookup(type_name)
+        var_name = node.var_node.value
+        var_symbol = VarSymbol(var_name, type_symbol)
+        self.symtab.define(var_symbol)
+
     def visit_Assign(self, node):
-        pdb.set_trace()
+        #pdb.set_trace()
         var_name = node.left.value
         var_symbol = self.symtab.lookup(var_name)
         if var_symbol is None:
             raise NameError(repr(var_name))
         self.visit(node.right)
+
+    def visit_NoOp(self, node):
+        pass
 
     def visit_Var(self, node):
         var_name = node.value
@@ -548,8 +558,8 @@ class SymbolTableBuilder(NodeVisitor):
         self.visit(node.right)
 
 class Interpreter(NodeVisitor):
-    def __init__(self, parser):
-        self.parser = parser
+    def __init__(self, tree):
+        self.tree = tree
         self.GLOBAL_SCOPE = {}
 
     def visit_Program(self, node):
@@ -613,7 +623,7 @@ class Interpreter(NodeVisitor):
 
     def interpret(self):
         #pdb.set_trace()
-        tree = self.parser.parse()
+        tree = self.tree
         if tree is None:
             return ''
         return self.visit(tree)
@@ -629,9 +639,9 @@ def main():
     symtab_builder.visit(tree)
     print('')
     print('Symbol Table contents:')
-    print(symbolTable.symtab)
+    print(symtab_builder.symtab)
 
-    interpreter = Interpreter(parser)
+    interpreter = Interpreter(tree)
     result = interpreter.interpret()
     for k, v in sorted(interpreter.GLOBAL_SCOPE.items()):
         print('{} = {}'.format(k, v))
