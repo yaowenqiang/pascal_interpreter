@@ -21,33 +21,35 @@ COLON = 'COLON'
 COMMA = 'COMMA'
 EOF = 'EOF'
 
+import pdb
+
+
 class Token(object):
     def __init__(self, type, value):
         self.type = type
         self.value = value
 
     def __str__(self):
-        return 'Token(type, (value))'.format(
-            type=self.type,
-            value=repr(self.value)
-        )
+        return 'Token(type, (value))'.format(type=self.type,
+                                             value=repr(self.value))
 
     def __repr__(self):
         return self.__str__()
 
+
 RESERVED_KEYWORDS = {
-    'PROGRAM' : Token('PROGRAM', 'PROGRAM'),
-    'VAR' : Token('VAR', 'VAR'),
-    'DIV' : Token('INTEGER_DIV', 'DIV'),
-    'REAL' : Token('REAL', 'REAL'),
-    'BEGIN' : Token('BEGIN', 'BEGIN'),
-    'END' : Token('END', 'END'),
+    'PROGRAM': Token('PROGRAM', 'PROGRAM'),
+    'VAR': Token('VAR', 'VAR'),
+    'DIV': Token('INTEGER_DIV', 'DIV'),
+    'INTEGER': Token('INTEGER', 'INTEGER'),
+    'REAL': Token('REAL', 'REAL'),
+    'BEGIN': Token('BEGIN', 'BEGIN'),
+    'END': Token('END', 'END'),
 }
 
 
-
 class Lexer(object):
-    def __init__(self,text):
+    def __init__(self, text):
         self.text = text
         self.pos = 0
         self.current_char = self.text[self.pos]
@@ -57,18 +59,17 @@ class Lexer(object):
 
     def advance(self):
         self.pos += 1
-        if self.pos > len(self.text)-1:
+        if self.pos > len(self.text) - 1:
             self.current_char = None
         else:
             self.current_char = self.text[self.pos]
 
     def peek(self):
         peek_pos = self.pos + 1
-        if peek_pos > len(self.text) -1: 
+        if peek_pos > len(self.text) - 1:
             return None
         else:
             return self.text[peek_pos]
-
 
     def skip_whitespace(self):
         while self.current_char is not None and self.current_char.isspace():
@@ -89,10 +90,8 @@ class Lexer(object):
             result += self.current_char
             self.advance()
 
-            while (
-                self.current_char is not None and
-                self.current_char.isdigit()
-            ):
+            while (self.current_char is not None
+                   and self.current_char.isdigit()):
                 result += self.current_char
                 self.advance()
 
@@ -174,8 +173,10 @@ class Lexer(object):
             self.error()
         return Token(EOF, None)
 
+
 class AST(object):
     pass
+
 
 class BinOp(AST):
     def __init__(self, left, op, right):
@@ -183,14 +184,17 @@ class BinOp(AST):
         self.token = self.op = op
         self.right = right
 
+
 class UnaryOp(AST):
     def __init__(self, op, expr):
         self.token = self.op = op
         self.expr = expr
 
+
 class Compound(AST):
     def __init__(self):
         self.children = []
+
 
 class Assign(AST):
     def __init__(self, left, op, right):
@@ -198,13 +202,16 @@ class Assign(AST):
         self.token = self.op = op
         self.right = right
 
+
 class Var(AST):
     def __init__(self, token):
         self.token = token
         self.value = token.value
 
+
 class NoOp(AST):
     pass
+
 
 class Num(AST):
     def __init__(self, token):
@@ -216,6 +223,7 @@ class Program(AST):
     def __init__(self, name, block):
         self.name = name
         self.block = block
+
 
 class Block(AST):
     def __init__(self, declarations, compound_statement):
@@ -232,6 +240,7 @@ class Parser(object):
         raise Exception("Invalid syntax")
 
     def eat(self, token_type):
+        #pdb.set_trace()
         if self.current_token.type == token_type:
             self.current_token = self.lexer.get_next_token()
         else:
@@ -273,13 +282,11 @@ class Parser(object):
             var_nodes.append(Var(self.current_token))
             self.eat(ID)
 
-            
         self.eat(COLON)
 
         type_node = self.type_spec()
         var_declarations = [
-            VarDecl(var_node, type_node)
-            for var_node in var_nodes
+            VarDecl(var_node, type_node) for var_node in var_nodes
         ]
 
         return var_declarations
@@ -304,7 +311,6 @@ class Parser(object):
             root.children.append(node)
 
         return root
-
 
     def statement_list(self):
         node = self.statement()
@@ -331,7 +337,7 @@ class Parser(object):
         token = self.current_token
         self.eat(ASSIGN)
         right = self.expr()
-        node = Assign(left, token ,right)
+        node = Assign(left, token, right)
 
         return node
 
@@ -392,7 +398,7 @@ class Parser(object):
                 self.eat(PLUS)
             elif token.type == MINUS:
                 self.eat(MINUS)
-            
+
             node = BinOp(left=node, op=token, right=self.term())
 
         return node
@@ -403,23 +409,28 @@ class Parser(object):
             self.error
         return node
 
+
 class VarDecl(object):
     def __init__(self, var_node, type_node):
         self.var_node = var_node
-        self.type_node = self.lexer.type_node
+        self.type_node = type_node
+
 
 class Type(object):
     def __init__(self, token):
         self.token = token
         self.value = token.value
 
+
 class NodeVisitor(object):
     def visit(self, node):
         method_name = 'visit_' + type(node).__name__
         visitor = getattr(self, method_name, self.generic_visit)
         return visitor(node)
+
     def generic_visit(self, node):
         raise Exception('No visit{} method'.format(type(node), __name__))
+
 
 class Interpreter(NodeVisitor):
     def __init__(self, parser):
@@ -430,11 +441,15 @@ class Interpreter(NodeVisitor):
         self.visit(node.block)
 
     def visit_Block(self, node):
+        #pdb.set_trace()
         for declaration in node.declarations:
             self.visit(declaration)
         self.visit(node.compound_statement)
 
     def visit_Var(self, node):
+        pass
+    
+    def visit_VarDecl(self, node):
         pass
 
     def visit_Type(self, node):
@@ -482,21 +497,23 @@ class Interpreter(NodeVisitor):
         pass
 
     def interpret(self):
+        #pdb.set_trace()
         tree = self.parser.parse()
         if tree is None:
             return ''
         return self.visit(tree)
 
+
 def main():
     import sys
     text = open(sys.argv[1], 'r').read()
-
     lexer = Lexer(text)
     parser = Parser(lexer)
     interpreter = Interpreter(parser)
     result = interpreter.interpret()
     for k, v in sorted(interpreter.GLOBAL_SCOPE.items()):
         print('{} = {}'.format(k, v))
+
 
 if __name__ == '__main__':
     main()
