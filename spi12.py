@@ -279,6 +279,7 @@ class Parser(object):
                 self.eat(SEMI)
 
         while self.current_token.type == PROCEDURE:
+            #pdb.set_trace()
             self.eat(PROCEDURE)
             proc_name = self.current_token.value
             self.eat(ID)
@@ -571,7 +572,7 @@ class SymbolTableBuilder(NodeVisitor):
 class Interpreter(NodeVisitor):
     def __init__(self, tree):
         self.tree = tree
-        self.GLOBAL_SCOPE = {}
+        self.GLOBAL_MEMORY = {}
 
     def visit_Program(self, node):
         self.visit(node.block)
@@ -582,10 +583,10 @@ class Interpreter(NodeVisitor):
             self.visit(declaration)
         self.visit(node.compound_statement)
 
-    def visit_Var(self, node):
-        pass
-    
     def visit_VarDecl(self, node):
+        pass
+
+    def visit_ProcedureDecl(self, node):
         pass
 
     def visit_Type(self, node):
@@ -619,7 +620,8 @@ class Interpreter(NodeVisitor):
 
     def visit_Assign(self, node):
         var_name = node.left.value
-        self.GLOBAL_SCOPE[var_name] = self.visit(node.right)
+        var_value = self.visit(node.right)
+        self.GLOBAL_MEMORY[var_name] = var_value
 
     def visit_Var(self, node):
         var_name = node.value
@@ -654,7 +656,11 @@ def main():
 
     interpreter = Interpreter(tree)
     result = interpreter.interpret()
-    for k, v in sorted(interpreter.GLOBAL_SCOPE.items()):
+
+    print('')
+    print('Run-time GLOBAL_MEMORY contentes:')
+
+    for k, v in sorted(interpreter.GLOBAL_MEMORY.items()):
         print('{} = {}'.format(k, v))
 
 
