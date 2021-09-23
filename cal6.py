@@ -143,5 +143,9 @@ def main():
         print(result)
 
 
+def dump(obj):
+  for attr in dir(obj):
+    print("obj.%s = %r" % (attr, getattr(obj, attr)))
+
 if __name__ == '__main__':
     main()
