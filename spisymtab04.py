@@ -498,6 +498,18 @@ class SemanticAnalyzer(NodeVisitor):
     def visit_NoOp(self, node):
         pass
 
+    def visit_Var(self, node):
+        var_name = node.value
+        var_symbol = self.symtab.lookup(var_name)
+
+    def visit_Assign(self, node):
+        self.visit(node.right)
+        self.visit(node.left)
+
+    def visit_BinOp(self, node):
+        self.visit(node.left)
+        self.visit(node.right)
+
     def visit_VarDecl(self, node):
         type_name = node.type_node.value
         type_symbol = self.symtab.lookup(type_name)
@@ -701,10 +713,10 @@ def main():
 
 if __name__ == '__main__':
     text =  """
-PROGRAM SymTab1;
+PROGRAM SymTab4;
     VAR x, y : INTEGER;
 BEGIN
-
+    x := x + y;
 END.
 
 """
