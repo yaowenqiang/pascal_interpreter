@@ -109,11 +109,11 @@ class Lexer(object):
             result += self.current_char
             self.advance()
 
-        token = RESERVED_KEYWORDS.get(result, Token(ID, result))
+        token = RESERVED_KEYWORDS.get(result.upper(), Token(ID, result))
         return token
 
     def get_next_token(self):
-        pdb.set_trace()
+        #pdb.set_trace()
         while self.current_char is not None:
             if self.current_char.isspace():
                 self.skip_whitespace()
@@ -255,7 +255,7 @@ class Parser(object):
             self.error()
 
     def program(self):
-        pdb.set_trace()
+        #pdb.set_trace()
         self.eat(PROGRAM)
         var_node = self.variable()
         prog_name = var_node.value
@@ -463,7 +463,11 @@ class VarSymbol(Symbol):
         super().__init__(name, type)
 
     def __str__(self):
-        return '<{name}:{type}>'.format(name=self.name, type=self.type)
+        return "<{class_name}(name='{name}', type='{type}')>".format(
+                    class_name=self.__class__.__name__,
+                    name=self.name,
+                    type=self.type,
+                )
 
     __repr__ = __str__
 
@@ -475,8 +479,11 @@ class BuiltinTypeSymbol(Symbol):
     def __str__(self):
         return self.name
 
-    __repr__ = __str__
-
+    def __repr__(self):
+        return "<{class_name}(name='{name}')>".format(
+                    class_name=self.__class__.__name__,
+                    name=self.name
+                )
 
 class SymbolTable(object):
     def __init__(self):
@@ -507,7 +514,7 @@ class SymbolTable(object):
 
 class SemanticAnalyzer(NodeVisitor):
     def __init__(self):
-        self.scope = ScopedSymbolTable(scope_name='global', scope_levle=1)
+        self.scope = ScopedSymbolTable(scope_name='global', scope_level=1)
 
     def visit_Block(self, node):
         for declaration in node.declarations:
@@ -525,19 +532,19 @@ class SemanticAnalyzer(NodeVisitor):
     def visit_NoOp(self, node):
         pass
 
-    def visit_VarDecal(self, node):
+    def visit_VarDecl(self, node):
         type_name = node.type_node.value
-        type_symbol = self.symtab.lookup(type_name)
+        type_symbol = self.scope.lookup(type_name)
 
         var_name = node.var_node.value
         var_symbol = VarSymbol(var_name, type_symbol)
-        self.symtab.insert(var_symbol)
+        self.scope.insert(var_symbol)
 
 
 
 class ScopedSymbolTable(object):
     def __init__(self, scope_name, scope_level):
-        self._symbols = OrderedDict()
+        self._symbols = {}
         self.scope_name = scope_name
         self.scope_level = scope_level
         self._init_builtins()
@@ -573,7 +580,7 @@ class ScopedSymbolTable(object):
         self._symbols[symbol.name] = symbol
 
     def insert(self, symbol):
-        print('Insert: %s' % symbole.name)
+        print('Insert: %s' % symbol.name)
         self._symbols[symbol.name] = symbol
 
     def lookup(self, name):
@@ -732,4 +739,4 @@ end.
 
     semantic_analyzer = SemanticAnalyzer()
     semantic_analyzer.visit(tree)
-    print(semantic_analyzer.symtab)
+    print(semantic_analyzer.scope)
