@@ -109,6 +109,7 @@ class Lexer(object):
             result += self.current_char
             self.advance()
 
+        print('(id: {result})'.format(result=result))
         token = RESERVED_KEYWORDS.get(result.upper(), Token(ID, result))
         return token
 
@@ -234,8 +235,9 @@ class Block(AST):
         self.compound_statement = compound_statement
 
 class ProcedureDecl(AST):
-    def __init__(self, proc_name, block_node):
+    def __init__(self, proc_name, params, block_node):
         self.proc_name = proc_name
+        self.params = params
         self.block_node = block_node
 
 
@@ -273,25 +275,69 @@ class Parser(object):
 
     def declarations(self):
         declarations = []
-        if self.current_token.type == VAR:
-            self.eat(VAR)
-            while self.current_token.type == ID:
-                var_decl = self.variable_decloation()
-                declarations.extend(var_decl)
-                self.eat(SEMI)
+        while True:
+            if self.current_token.type == VAR:
+                self.eat(VAR)
+                while self.current_token.type == ID:
+                    var_decl = self.variable_decloation()
+                    declarations.extend(var_decl)
+                    self.eat(SEMI)
 
-        while self.current_token.type == PROCEDURE:
-            #pdb.set_trace()
-            self.eat(PROCEDURE)
-            proc_name = self.current_token.value
-            self.eat(ID)
-            self.eat(SEMI)
-            block_node = self.block()
-            proc_decl = ProcedureDecl(proc_name, block_node)
-            declarations.append(proc_decl)
-            self.eat(SEMI)
+            elif self.current_token.type == PROCEDURE:
+                #pdb.set_trace()
+                self.eat(PROCEDURE)
+                proc_name = self.current_token.value
+                self.eat(ID)
+                params = []
+                
+                if self.current_token.type == LPAREN:
+                    self.eat(LPAREN)
+                    params = self.formal_parameter_list()
+
+                    self.eat(RPAREN)
+
+                self.eat(SEMI)
+                block_node = self.block()
+                proc_decl = ProcedureDecl(proc_name, params, block_node)
+                declarations.append(proc_decl)
+                self.eat(SEMI)
+            else:
+                break
 
         return declarations
+
+    def formal_parameter_list(self):
+        #pdb.set_trace()
+        if not self.current_token.type == ID:
+            return []
+
+        param_nodes = self.formal_parameters()
+
+        while self.current_token.type == SEMI:
+            self.eat(SEMI)
+            param_nodes.extend(self.formal_parameters())
+
+        return param_nodes
+
+    def formal_parameters(self):
+        param_nodes = []
+        param_tokens = [self.current_token]
+
+        self.eat(ID)
+
+        while self.current_token.type == COMMA:
+            self.eat(COMA)
+            param_tokens.append(self.current_token)
+            self.eat(ID)
+
+        self.eat(COLON)
+        type_node = self.type_spec()
+
+        for param_token in param_tokens:
+            param_node = Param(Var(param_token), type_node)
+            param_nodes.append(param_node)
+
+        return param_nodes
 
     def variable_decloation(self):
         var_nodes = [Var(self.current_token)]
@@ -441,10 +487,15 @@ class Type(object):
         self.token = token
         self.value = token.value
 
+class Param(AST):
+    def __init__(self, var_node, type_node):
+        self.var_node = var_node
+        self.type_node = type_node
 
 class NodeVisitor(object):
     def visit(self, node):
         method_name = 'visit_' + type(node).__name__
+        print('visit {method_name}'.format(method_name=method_name))
         visitor = getattr(self, method_name, self.generic_visit)
         return visitor(node)
 
@@ -550,11 +601,12 @@ class SemanticAnalyzer(NodeVisitor):
         self.scope.insert(var_symbol)
 
     def visit_ProcedureDecl(self, node):
+        #pdb.set_trace()
         proc_name = node.proc_name
         proc_symbol = ProcedureSymbol(proc_name)
-        self.current_scopre.insert(proc_symbol)
+        self.current_scope.insert(proc_symbol)
 
-        print('enter scope: %s' % proce_name)
+        print('ENTER scope: %s' % proc_name)
 
         procedure_scope = ScopedSymbolTable(
             scope_name=proc_name,
@@ -562,17 +614,18 @@ class SemanticAnalyzer(NodeVisitor):
         )
         self.current_scope = procedure_scope
 
-        for param in node.params:
-            param_type = self.current_scope.lookup(param.type_node.value)
-            param_name = param.var_node.value
-            var_symbol = VarSymbol(param_name, param_type)
-            self.current_scope.insert(var_symbol)
-            proc_symbol.params.append(var_symbol)
+        if node.params is not None:
+            for param in node.params:
+                param_type = self.current_scope.lookup(param.type_node.value)
+                param_name = param.var_node.value
+                var_symbol = VarSymbol(param_name, param_type)
+                self.current_scope.insert(var_symbol)
+                proc_symbol.params.append(var_symbol)
 
-        self.vsit(node.block_node)
+        self.visit(node.block_node)
 
         print(procedure_scope)
-        print('leave scope: %s' % proc_name)
+        print('LEAVE scope: %s' % proc_name)
 
 
 class ProcedureSymbol(Symbol):
